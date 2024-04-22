@@ -20,13 +20,13 @@ const validaGame = [
         }
     }),
     check('plataforma').not().isEmpty().trim().withMessage('Informar a plataforma é obrigatório')
-        .isLength({ min: 2 }).withMessage('A plataforma é muito curto. Mínimo de 5')
-        .isLength({ max: 35 }).withMessage('A plataforma é muito longa. Máximo de 25')
+        .isLength({ max: 35 }).withMessage('A plataforma é muito longa. Máximo de 35')
         .isAlphanumeric('pt-BR', { ignore: '/. ' }).withMessage('A plataforma não pode conter caracteres especiais'),
     check('condicao').not().isEmpty().trim().withMessage('É obrigatório informar a condição'),
-    check('preco').notEmpty().withMessage('O preço é obrigatório').isFloat(),
+    check('preco').notEmpty().withMessage('O preço é obrigatório').isFloat().withMessage("O preço deve ser um valor numérico"),
     check('anoLancamento').matches(/^\d{4}-\d{2}-\d{2}$/)
-        .withMessage('O formato da data é inválido. Informe yyyy-mm-dd'),
+        .withMessage('O formato da data é inválido. Informe yyyy-mm-dd')
+        .notEmpty().withMessage('A data de lançamento é obrigatória'),
 
     check('genero').notEmpty().withMessage('O genero é obrigatório'),
     check('quantidade').isNumeric().withMessage('A quantidade deve ser um número')
@@ -63,8 +63,8 @@ router.get('/', async (req, res) => {
 
 
 /**
- * GET /api/prestadores/id/:id
- * Lista o prestador de serviço pelo id
+ * GET /api/game/id/:id
+ * Lista o game pelo id
  * Parâmetros: id
  */
 
@@ -88,8 +88,8 @@ router.get('/id/:id', async (req, res) => {
     }
 })
 /**
- * GET /api/prestadores/id/:id
- * Lista o prestador de serviço pelo id
+ * GET /api/game/nome/:filtro
+ * Lista o game pelo nome
  * Parâmetros: id
  */
 router.get('/nome/:filtro', async (req, res) => {
@@ -114,9 +114,39 @@ router.get('/nome/:filtro', async (req, res) => {
         })
     }
 })
+
+/**
+ * GET /api/games/limit/:limitMin&:limitMax
+ * Lista os jogos que atendem aos limites 
+ * Parâmetros: limitMin e limitMax
+ */
+router.get('/limit/:limitMin&:limitMax', async (req, res) => {
+    try {
+        const limitMin = Number(req.params.limitMin)
+        const limitMax = Number(req.params.limitMax)
+        const docs = []
+        await db.collection(nomeCollection).find({
+            $and: [
+                { 'preco': {$gt: limitMin, $lt: limitMax } },
+            ]
+        }).forEach((doc) => {
+            docs.push(doc)
+        })
+        res.status(200).json(docs)
+    } catch (err) {
+        res.status(500).json({
+            errors: [{
+                value: `${err.message}`,
+                msg: 'Erro ao obter os jogos pelos limites passados',
+                param: '/limit/:limitMin&:limitMax'
+            }]
+        })
+    }
+})
+
 /**
  * GET /api/game/id
- * Remove o prestador de serviço pelo id
+ * Remove o game pelo id
  * Parâmetros: id
  */
 router.delete('/:id', async(req, res)=>{
@@ -138,8 +168,8 @@ router.delete('/:id', async(req, res)=>{
 
 /**
  * POST /api/game
- * Insere um novo prestador de serviço
- * Parâmetros: Objeto prestador
+ * Insere um game
+ * Parâmetros: Objeto game
  */
 router.post('/', validaGame, async(req, res) => {
     try{
@@ -157,7 +187,7 @@ router.post('/', validaGame, async(req, res) => {
 
 /**
  * PUT /api/game
- * Insere um novo prestador de serviço
+ * Atualiza os dados de um game existente
  * Parâmetros: Objeto prestador
  */
 
